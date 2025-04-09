@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 
-const LINKEDIN_ORG_URN = 'urn:li:organization:105738597';
+const ORGANIZATION_ID = '105738597'; // Apenas o número, sem 'urn:li:organization:'
 const LINKEDIN_ACCESS_TOKEN = process.env.LINKEDIN_ACCESS_TOKEN;
 
 app.get('/api/posts', async (req, res) => {
@@ -20,10 +20,10 @@ app.get('/api/posts', async (req, res) => {
         'X-Restli-Protocol-Version': '2.0.0'
       },
       params: {
-        q: 'authors',
-        authors: [LINKEDIN_ORG_URN],
-        sort: 'RECENT',
-        count: 10
+        q: 'organization',
+        organization: ORGANIZATION_ID,
+        count: 10,
+        sort: 'RECENT'
       }
     });
 

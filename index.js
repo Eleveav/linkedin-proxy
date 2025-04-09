@@ -8,18 +8,19 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 
-const LINKEDIN_ORG_URN = 'urn:li:organization:105738597';
+const ORGANIZATION_ID = '105738597';
 const LINKEDIN_ACCESS_TOKEN = process.env.LINKEDIN_ACCESS_TOKEN;
 
 app.get('/api/posts', async (req, res) => {
   try {
     const response = await axios.get('https://api.linkedin.com/v2/ugcPosts', {
       headers: {
-        Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`
+        Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`,
+        'X-Restli-Protocol-Version': '2.0.0'
       },
       params: {
         q: 'authors',
-        authors: LINKEDIN_ORG_URN,
+        authors: `urn:li:organization:${ORGANIZATION_ID}`,
         count: 10,
         sortBy: 'LAST_MODIFIED'
       }

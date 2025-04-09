@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 
-const ORGANIZATION_ID = '105738597'; // Apenas o número, sem 'urn:li:organization:'
+const ORGANIZATION_ID = '105738597'; // só o número
 const LINKEDIN_ACCESS_TOKEN = process.env.LINKEDIN_ACCESS_TOKEN;
 
 app.get('/api/posts', async (req, res) => {
@@ -21,7 +21,7 @@ app.get('/api/posts', async (req, res) => {
       },
       params: {
         q: 'organization',
-        organization: ORGANIZATION_ID,
+        organization: `urn:li:organization:${ORGANIZATION_ID}`, // URN completo
         count: 10,
         sort: 'RECENT'
       }

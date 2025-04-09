@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 
 const LINKEDIN_ORG_URN = 'urn:li:organization:105738597';
-const LINKEDIN_ACCESS_TOKEN = process.env.LINKEDIN_ACCESS_TOKEN; // coloque no .env
+const LINKEDIN_ACCESS_TOKEN = process.env.LINKEDIN_ACCESS_TOKEN;
 
 app.get('/api/posts', async (req, res) => {
   try {
@@ -43,7 +43,10 @@ app.get('/api/posts', async (req, res) => {
     res.json(posts);
   } catch (err) {
     console.error('Erro ao buscar posts:', err.response?.data || err.message);
-    res.status(500).json({ error: 'Erro ao buscar posts do LinkedIn' });
+    res.status(500).json({
+      error: 'Erro ao buscar posts do LinkedIn',
+      details: err.response?.data || err.message
+    });
   }
 });
 

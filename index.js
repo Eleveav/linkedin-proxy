@@ -9,39 +9,46 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 
 const LINKEDIN_ACCESS_TOKEN = process.env.LINKEDIN_ACCESS_TOKEN;
-const ORGANIZATION_ID = '105738597'; // apenas o ID numérico
+const ORGANIZATION_ID = '105738597'; // apenas o número
 
 app.get('/api/posts', async (req, res) => {
   try {
-    const response = await axios.get(
-      `https://api.linkedin.com/rest/posts`,
-      {
-        headers: {
-          Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`,
-          'LinkedIn-Version': '202306',
-          'X-Restli-Protocol-Version': '2.0.0',
-        },
-        params: {
-          q: 'authors',
-          authors: `urn:li:organization:${ORGANIZATION_ID}`,
-          sort: 'RELEVANCE', // ou RECENT
-          count: 10,
-        },
-      }
-    );
+    const response = await axios.get('https://api.linkedin.com/rest/posts', {
+      headers: {
+        Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`,
+        'LinkedIn-Version': '202306',
+        'X-Restli-Protocol-Version': '2.0.0',
+      },
+      params: {
+        q: 'authors',
+        authors: [`urn:li:organization:${ORGANIZATION_ID}`], // << atenção: precisa ser array!
+        sort: 'RECENT',
+        count: 10,
+      },
+      paramsSerializer: (params) => {
+        const query = new URLSearchParams();
+        Object.keys(params).forEach((key) => {
+          if (Array.isArray(params[key])) {
+            params[key].forEach((val) => query.append(key, val));
+          } else {
+            query.append(key, params[key]);
+          }
+        });
+        return query.toString();
+      },
+    });
 
     const posts = response.data.elements.map((item, i) => {
-      const content = item.content?.com.linkedin.ugc.ShareContent;
-      const text = content?.shareCommentary?.text || 'Sem texto';
-      const createdAt = new Date(Number(item.created?.time)).toISOString().split('T')[0];
-      const media = content?.media?.[0]?.thumbnails?.[0]?.resolvedUrl || null;
+      const text = item.text?.text || 'Sem texto';
+      const createdAt = item.created?.time
+        ? new Date(Number(item.created.time)).toISOString().split('T')[0]
+        : 'Sem data';
 
       return {
         id: item.id || String(i),
         title: text.slice(0, 60) + (text.length > 60 ? '...' : ''),
-        content: text,
-        date: createdAt,
-        image: media,
+        text,
+        createdAt,
       };
     });
 

@@ -10,91 +10,68 @@ app.use(cors());
 
 const ORGANIZATION_ID = '105738597'; // Seu ID de organização
 const ORGANIZATION_URN = `urn:li:organization:${ORGANIZATION_ID}`; // URN completo
-const LINKEDIN_ACCESS_TOKEN = process.env.LINKEDIN_ACCESS_TOKEN; // Seu token de acesso
+const LINKEDIN_ACCESS_TOKEN = process.env.LINKEDIN_ACCESS_TOKEN;
 
-// --- Rota da API ---
 app.get('/api/posts', async (req, res) => {
-  console.log(`Recebida requisição para /api/posts`);
-  console.log(`Usando URN: ${ORGANIZATION_URN}`);
-  console.log(`Usando Token: ${LINKEDIN_ACCESS_TOKEN ? 'Sim' : 'Não (Verifique .env)'}`);
-
-  if (!LINKEDIN_ACCESS_TOKEN) {
-    return res.status(500).json({ error: 'Token de acesso do LinkedIn não configurado.' });
-  }
-
   try {
-    console.log('Tentando chamar a API do LinkedIn...');
-    const response = await axios.get('https://api.linkedin.com/rest/posts', { // Endpoint atualizado
+    // Usando o endpoint /rest/posts com parâmetros de busca por autor
+    const response = await axios.get('https://api.linkedin.com/rest/posts', {
       headers: {
-        'Authorization': `Bearer ${LINKEDIN_ACCESS_TOKEN}`,
+        Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`,
         'LinkedIn-Version': '202503', // Versão atualizada
         'X-Restli-Protocol-Version': '2.0.0',
-        // 'Accept': 'application/json' // Adicionar se necessário
+        'X-RestLi-Method': 'FINDER' // Header necessário para busca com q=finderName
       },
       params: {
-        // Parâmetros para /rest/posts (VERIFICAR DOCUMENTAÇÃO v202503)
-        author: ORGANIZATION_URN, // Parâmetro provável para filtrar por autor único
-        count: 10,               // Quantidade de posts
-        sortBy: 'LAST_MODIFIED'  // Ou 'CREATED' - verificar documentação
-        // O parâmetro 'q' pode não ser necessário aqui quando 'author' é usado.
+        q: 'author', // Especifica o tipo de busca (finder)
+        author: ORGANIZATION_URN, // O URN da organização (axios codifica automaticamente, mas encodeURIComponent é mais seguro se construir URL manualmente)
+        count: 10, // Número de posts
+        isDsc: false // Parâmetro visto em exemplos, verificar necessidade/significado na doc oficial se houver problemas
+        // sortBy: 'LAST_MODIFIED' // Ou 'CREATED'. Verificar na documentação se 'sortBy' é suportado por este finder.
       }
     });
 
-    console.log('Sucesso ao chamar a API. Status:', response.status);
-    // console.log('Dados recebidos:', JSON.stringify(response.data, null, 2)); // Descomente para depuração detalhada
-
-    // Mapeamento dos dados (AJUSTAR CONFORME A RESPOSTA REAL de /rest/posts v202503)
-    // A estrutura exata pode variar. Verifique 'response.data.elements'.
+    // Mapeamento da resposta - VERIFICAR A ESTRUTURA REAL RETORNADA PELA API v202503
+    // A estrutura pode ter mudado. Use console.log(response.data.elements) para inspecionar.
     const posts = response.data.elements.map((item, i) => {
-      // Tentativa de encontrar o texto: verificar 'commentary' ou outras estruturas aninhadas
-      const text = item.commentary || item.text?.text || 'Sem conteúdo textual direto';
-
-      // Tentativa de encontrar a data: verificar 'createdAt', 'created', 'firstPublishedAt'
-      let createdAt = null;
-      if (item.createdAt && typeof item.createdAt === 'number') { // Pode ser timestamp direto
-         createdAt = new Date(item.createdAt).toISOString();
-      } else if (item.created?.time && typeof item.created.time === 'number') { // Estrutura aninhada
-         createdAt = new Date(item.created.time).toISOString();
-      } else if (item.firstPublishedAt && typeof item.firstPublishedAt === 'number') {
-         createdAt = new Date(item.firstPublishedAt).toISOString();
-      }
+      // Tentar acessar o texto diretamente em 'commentary' ou dentro de 'specificContent'
+      const text = item.commentary || item.specificContent?.['com.linkedin.ugc.ShareContent']?.shareCommentary?.text || 'Sem conteúdo';
+      // Verificar a localização correta da data
+      const createdAt = item.createdAt?.time ? new Date(Number(item.createdAt.time)).toISOString() : (item.firstPublishedAt ? new Date(Number(item.firstPublishedAt)).toISOString() : null);
 
       return {
-        id: item.id || String(i), // 'id' deve existir na resposta
+        id: item.id || String(i), // O ID deve vir de item.id
         title: text.slice(0, 60) + (text.length > 60 ? '...' : ''),
         content: text,
-        createdAt: createdAt
+        createdAt
       };
     });
 
-    console.log(`Mapeados ${posts.length} posts.`);
     res.json(posts);
-
   } catch (error) {
-    console.error('Erro detalhado ao buscar posts:');
+    console.error('Erro ao buscar posts do LinkedIn:');
+    // Log detalhado do erro da API do LinkedIn, se disponível
     if (error.response) {
-      // O servidor respondeu com um status fora do range 2xx
-      console.error('Status do Erro:', error.response.status);
-      console.error('Headers do Erro:', JSON.stringify(error.response.headers, null, 2));
-      console.error('Dados do Erro:', JSON.stringify(error.response.data, null, 2));
+      console.error('Status:', error.response.status);
+      console.error('Headers:', JSON.stringify(error.response.headers, null, 2));
+      console.error('Data:', JSON.stringify(error.response.data, null, 2));
+      console.error('Config:', JSON.stringify(error.config, null, 2)); // Loga a configuração da requisição axios
     } else if (error.request) {
       // A requisição foi feita mas não houve resposta
-      console.error('Erro de Requisição:', error.request);
+      console.error('Request error:', error.request);
     } else {
-      // Algo aconteceu ao configurar a requisição
-      console.error('Erro na Configuração:', error.message);
+      // Erro ao configurar a requisição
+      console.error('Error message:', error.message);
     }
-    // console.error('Config da Requisição Axios:', JSON.stringify(error.config, null, 2)); // Informação extra de debug
 
     res.status(error.response?.status || 500).json({
       error: 'Erro ao buscar posts do LinkedIn',
       message: error.message,
-      linkedinError: error.response?.data // Mantém o erro específico do LinkedIn
+      linkedinError: error.response?.data
     });
   }
 });
 
-// --- Inicialização do Servidor ---
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });

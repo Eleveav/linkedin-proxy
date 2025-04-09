@@ -13,24 +13,24 @@ const LINKEDIN_ACCESS_TOKEN = process.env.LINKEDIN_ACCESS_TOKEN;
 
 app.get('/api/posts', async (req, res) => {
   try {
-    const response = await axios.get('https://api.linkedin.com/v2/ugcPosts', {
+    const response = await axios.get('https://api.linkedin.com/rest/posts', {
       headers: {
         Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`,
+        'LinkedIn-Version': '202401',
         'X-Restli-Protocol-Version': '2.0.0'
       },
       params: {
-        q: 'authors',
-        authors: `urn:li:organization:${ORGANIZATION_ID}`,
-        count: 10,
-        sortBy: 'LAST_MODIFIED'
+        q: 'organization',
+        organization: `urn:li:organization:${ORGANIZATION_ID}`,
+        sort: 'RELEVANT', // ou 'RECENT'
+        count: 10
       }
     });
 
     const posts = response.data.elements.map((item, i) => {
-      const content = item.specificContent['com.linkedin.ugc.ShareContent'];
-      const text = content.shareCommentary?.text || 'Sem texto';
-      const createdAt = new Date(Number(item.created.time)).toISOString().split('T')[0];
-      const media = content.media?.[0]?.thumbnails?.[0]?.resolvedUrl || null;
+      const text = item.text?.text || 'Sem texto';
+      const createdAt = new Date(Number(item.created?.time || Date.now())).toISOString().split('T')[0];
+      const media = item.content?.media?.[0]?.url || null;
 
       return {
         id: item.id || String(i),

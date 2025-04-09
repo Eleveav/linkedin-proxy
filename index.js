@@ -19,7 +19,7 @@ app.get('/api/posts', async (req, res) => {
       },
       params: {
         q: 'authors',
-        authors: LINKEDIN_ORG_URN,
+        authors: `List(${LINKEDIN_ORG_URN})`,
         count: 10,
         sortBy: 'LAST_MODIFIED'
       }

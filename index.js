@@ -16,22 +16,15 @@ app.get('/api/posts', async (req, res) => {
     const response = await axios.get('https://api.linkedin.com/rest/posts', {
       headers: {
         Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`,
-        'LinkedIn-Version': '202403', // versão exigida pela nova API
+        'LinkedIn-Version': '202403',
         'X-Restli-Protocol-Version': '2.0.0',
         'Accept': 'application/json'
       },
       params: {
-        q: 'authors',
+        q: 'author',
+        author: LINKEDIN_ORG_URN,
         sort: 'RECENT',
         count: 10
-      },
-      paramsSerializer: params => {
-        const searchParams = new URLSearchParams();
-        searchParams.append('q', 'authors');
-        searchParams.append('sort', 'RECENT');
-        searchParams.append('count', '10');
-        searchParams.append('authors', LINKEDIN_ORG_URN);
-        return searchParams.toString();
       }
     });
 

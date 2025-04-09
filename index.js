@@ -19,7 +19,7 @@ app.get('/api/posts', async (req, res) => {
       },
       params: {
         q: 'authors',
-        authors: `List(${LINKEDIN_ORG_URN})`,
+        authors: LINKEDIN_ORG_URN,
         count: 10,
         sortBy: 'LAST_MODIFIED'
       }
@@ -45,7 +45,8 @@ app.get('/api/posts', async (req, res) => {
     console.error('Erro ao buscar posts:', err.response?.data || err.message);
     res.status(500).json({
       error: 'Erro ao buscar posts do LinkedIn',
-      details: err.response?.data || err.message
+      message: err.message,
+      linkedinError: err.response?.data || null
     });
   }
 });

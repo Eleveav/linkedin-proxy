@@ -1,55 +1,35 @@
-const express = require('express');
-const cors = require('cors');
-const axios = require('axios');
-require('dotenv').config();
-
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-app.use(cors());
-
-const ORGANIZATION_ID = '105738597'; // só o número
-const LINKEDIN_ACCESS_TOKEN = process.env.LINKEDIN_ACCESS_TOKEN;
-
-app.get('/api/posts', async (req, res) => {
+app.get('/posts', async (req, res) => {
   try {
-    const response = await axios.get('https://api.linkedin.com/rest/posts', {
+    const response = await axios.get('https://api.linkedin.com/v2/ugcPosts', {
       headers: {
-        Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`,
-        'LinkedIn-Version': '202403',
-        'X-Restli-Protocol-Version': '2.0.0'
+        Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`
       },
       params: {
-        q: 'organization',
-        organization: `urn:li:organization:${ORGANIZATION_ID}`, // URN completo
+        q: 'authors',
+        authors: LINKEDIN_ORG_URN,
         count: 10,
-        sort: 'RECENT'
+        sortBy: 'LAST_MODIFIED'
       }
     });
 
     const posts = response.data.elements.map((item, i) => {
-      const text = item.text?.text || 'Sem conteúdo';
-      const createdAt = item.created?.time ? new Date(Number(item.created.time)).toISOString() : null;
+      const content = item.specificContent['com.linkedin.ugc.ShareContent'];
+      const text = content.shareCommentary?.text || 'Sem texto';
+      const createdAt = new Date(Number(item.created.time)).toISOString().split('T')[0];
+      const media = content.media?.[0]?.thumbnails?.[0]?.resolvedUrl || null;
 
       return {
         id: item.id || String(i),
         title: text.slice(0, 60) + (text.length > 60 ? '...' : ''),
         content: text,
-        createdAt
+        date: createdAt,
+        image: media
       };
     });
 
     res.json(posts);
-  } catch (error) {
-    console.error('Erro ao buscar posts:', error.response?.data || error.message);
-    res.status(500).json({
-      error: 'Erro ao buscar posts do LinkedIn',
-      message: error.message,
-      linkedinError: error.response?.data
-    });
+  } catch (err) {
+    console.error('Erro ao buscar posts:', err.response?.data || err.message);
+    res.status(500).json({ error: 'Erro ao buscar posts do LinkedIn' });
   }
-});
-
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
 });
